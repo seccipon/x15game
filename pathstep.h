@@ -31,7 +31,7 @@ public:
   }
 
   int GetHeuristic() const {
-    return  GetPathLength() + m_table.GetManhatanSum() * m_table.GetManhatanSum();
+    return m_table.GetManhatanSum();
   }
 
   int GetManhatanSum() const {

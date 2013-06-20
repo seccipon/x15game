@@ -68,7 +68,25 @@ int main()
     }
   }
 
+
+
+
   TableCellsFunc::PrintCells(cells);
+
+  int inv = 0;
+  for (int i=0; i<9; ++i)
+    if (cells[i])
+      for (int j=0; j<i; ++j)
+        if (cells[j] > cells[i])
+          ++inv;
+  for (int i=0; i<9; ++i)
+    if (cells[i] == kEmptyCell)
+      inv += 1 + i / 3;
+
+  puts ((inv & 1) ? "No Solution" : "Solution Exists");
+  if (inv&1) {
+    return -1;
+  }
 
   if ((TableCellsFunc::GetInversionCnt(cells) + TableCellsFunc::FindEmptyCell(cells) / 4 + 1) %2) {
     cout << "no solution" << endl;
@@ -80,19 +98,24 @@ int main()
 
 
 
-  std::vector<PathStep> openCells;
-  std::vector<PathStep> closedSet;
+  std::set<PathStep,  PathStep::CompareHeuristicLess> openCells;
+  std::set<PathStep, PathStep::CompareCellsLexLess> closedSet;
 
 
   PathStep startPos(tbl, 0);
 
-  openCells.push_back(startPos);
+  openCells.insert(startPos);
 
   while(!openCells.empty()) {
-    PathStep currentStep = openCells.back();
+
+    cout << "BACK : " << openCells.rbegin()->GetHeuristic() << " FRONT "  << openCells.begin()->GetHeuristic() << endl;
+    cout << "OPEN : " << openCells.size() << " CLOSED " << closedSet.size() << endl;
+
+    PathStep currentStep = *openCells.rbegin();
+
     const Table & currentTable (currentStep.GetTable());
 
-    openCells.pop_back();
+    openCells.erase(currentStep);
     TableCellsFunc::PrintCells(currentStep.GetTable().GetCells());
 //    cout << "Inversions: " << currentStep.GetInversions() << endl;
     cout << "Wrongs: " << currentStep.GetWrongCnt() << endl;
@@ -101,7 +124,7 @@ int main()
     cout << "INV" << currentStep.GetInversions() << endl;
     cout << "MAH" << currentStep.GetManhatanSum() <<endl;
 
-    closedSet.push_back(currentStep);
+    closedSet.insert(currentStep);
     if (!currentTable.GetInversionsNum() && currentTable.GetEmptyCellIndex() == 8) {
       std::cout << "FOUND!" << std::endl;
 
@@ -130,27 +153,29 @@ int main()
 //          continue;
 //        }
         moveStep.prev.reset(new PathStep(currentStep));
-        if (std::find_if(closedSet.begin(), closedSet.end(), boost::bind(TablesEqual, moveStep, _1)) != closedSet.end()) {
+        if (closedSet.find(moveStep) != closedSet.end()) {
 
           //Сосед в закрытом списке, игнорируем его
 //          cout << "closed" << endl;
           continue;
         }
-        auto foundOpen = std::find_if(openCells.begin(), openCells.end(), boost::bind(TablesEqual, moveStep, _1));
+        auto foundOpen = openCells.find(moveStep);
         if (foundOpen ==  openCells.end()) {
           //Сосед не в открытом списке, надо добавить
-          openCells.push_back(moveStep);
-          std::sort(openCells.begin(), openCells.end(), sorter);
+          openCells.insert(moveStep);
+//          std::sort(openCells.begin(), openCells.end(), sorter);
 //          cout << "opened" << endl;
 
         } else {
           //Сосед в открытом списке, проверяем, лучше ли этот путь
-          PathStep & step = *foundOpen;
+          const PathStep & step = *foundOpen;
           if (moveStep.GetHeuristic() < step.GetHeuristic()) {
             //Мы пришли сюда лучшим путем, чем раньше
             cout << "changedd : " << step.GetHeuristic() << " " << moveStep.GetHeuristic() << endl;
-            step = moveStep;
-            std::sort(openCells.begin(), openCells.end(), sorter);
+//            step = moveStep;
+            openCells.erase(step);
+            openCells.insert(step);
+//            std::sort(openCells.begin(), openCells.end(), sorter);
 //            cout << "changed" << endl;
           }
         }
