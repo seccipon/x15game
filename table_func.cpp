@@ -20,12 +20,12 @@ namespace TableCellsFunc
 
   bool IsRightBorder(int i)
   {
-    return (i == 2) || (i == 5) || (i == 8);// | (i == 15);
+    return (i == 3) || (i == 7) || (i == 11) || (i == 15);
   }
 
   bool IsLeftBorder(int i)
   {
-    return (i == 0) || (i == 3) || (i == 6);// | (i == 12);
+    return (i == 0) || (i == 4) || (i == 8) || (i == 12);
   }
 
   int GetInversionCnt(const TableCells & gt)
@@ -61,7 +61,7 @@ namespace TableCellsFunc
     cout << "_____" <<endl;
     for (int i = 0; i < kTableSize; i++) {
       cout << ((cells[i] == kEmptyCell) ? std::string("x") : boost::lexical_cast<string>(static_cast<int>(cells[i]))) << "  ";
-      if (!((i + 1) % 3)) {
+      if (!((i + 1) % kTableSideSize)) {
         cout << endl;
       }
     }
@@ -92,16 +92,15 @@ namespace TableCellsFunc
 
   int GetManhatanSum(const TableCells &cells)
   {
-    const int sideSize = 3;
     int sum = 0;
     for (int i = 0; i < kTableSize; i++) {
       if (cells[i] == kEmptyCell) {
         continue;
       }
-      int iRowTarget = i / sideSize;
-      int iColTarget = i % sideSize;
-      int iRowReal = (cells[i] - 1) / sideSize;
-      int iColReal = (cells[i] - 1) % sideSize;
+      int iRowTarget = i / kTableSideSize;
+      int iColTarget = i % kTableSideSize;
+      int iRowReal = (cells[i] - 1) / kTableSideSize;
+      int iColReal = (cells[i] - 1) % kTableSideSize;
       sum += abs(iRowTarget - iRowReal) + abs(iColTarget - iColReal);
     }
     return sum;

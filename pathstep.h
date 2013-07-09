@@ -31,6 +31,7 @@ public:
   }
 
   int GetHeuristic() const {
+//    return 0;
     return m_table.GetManhatanSum();
   }
 
@@ -59,6 +60,7 @@ public:
 
   struct EqualTables
   {
+    typedef bool result_type;
     bool operator()(const PathStep & lhs, const PathStep & rhs)
     {
       return lhs.GetTable().GetCells() == rhs.GetTable().GetCells();

@@ -18,7 +18,7 @@
 #include "exc.h"
 #include "table.h"
 #include "pathstep.h"
-
+#include "astar.h"
 
 
 eMoveType GetRandomMove()
@@ -40,20 +40,19 @@ eMoveType GetRandomMove()
   }
 }
 
-PathStep::CompareHeuristicLess sorter;
+//PathStep::CompareHeuristicLess sorter;
 using std::cout;
 using std::endl;
 using std::cin;
 
 
-void ShowHistory(PathStep & result)
+void ShowHistory(PathStep & result, int & step_n)
 {
   if (result.prev) {
-    ShowHistory((*result.prev));
+    ShowHistory((*result.prev), step_n);
   }
+  step_n++;
   TableCellsFunc::PrintCells(result.GetTable().GetCells());
-
-
 }
 
 int main()
@@ -73,64 +72,60 @@ int main()
 
   TableCellsFunc::PrintCells(cells);
 
-  int inv = 0;
-  for (int i=0; i<9; ++i)
-    if (cells[i])
-      for (int j=0; j<i; ++j)
-        if (cells[j] > cells[i])
-          ++inv;
-  for (int i=0; i<9; ++i)
-    if (cells[i] == kEmptyCell)
-      inv += 1 + i / 3;
+//  int inv = 0;
+//  for (int i=0; i<9; ++i)
+//    if (cells[i] != kEmptyCell)
+//      for (int j=0; j<i; ++j)
+//        if (cells[j] > cells[i])
+//          ++inv;
+//  for (int i=0; i<9; ++i)
+//    if (cells[i] == kEmptyCell)
+//      inv += 1 + i / 3;
 
-  puts ((inv & 1) ? "No Solution" : "Solution Exists");
-  if (inv&1) {
-    return -1;
-  }
+//  puts ((inv & 1) ? "No Solution" : "Solution Exists");
+//  if (inv&1) {
+//    return -1;
+//  }
 
-  if ((TableCellsFunc::GetInversionCnt(cells) + TableCellsFunc::FindEmptyCell(cells) / 4 + 1) %2) {
-    cout << "no solution" << endl;
-    return -1;
-  }
+//  if ((TableCellsFunc::GetInversionCnt(cells) + TableCellsFunc::FindEmptyCell(cells) / 4 + 1) %2) {
+//    cout << "no solution" << endl;
+//    return -1;
+//  }
   Table tbl(cells);
 
   std::vector<eMoveType> possibleMoves = {eMoveType::Up, eMoveType::Down, eMoveType::Right, eMoveType::Left};
 
-
-
-  std::set<PathStep,  PathStep::CompareHeuristicLess> openCells;
-  std::set<PathStep, PathStep::CompareCellsLexLess> closedSet;
-
-
+  AStar astar;
   PathStep startPos(tbl, 0);
 
-  openCells.insert(startPos);
+  astar.PushToOpenList(startPos);
 
-  while(!openCells.empty()) {
-
-    cout << "BACK : " << openCells.rbegin()->GetHeuristic() << " FRONT "  << openCells.begin()->GetHeuristic() << endl;
-    cout << "OPEN : " << openCells.size() << " CLOSED " << closedSet.size() << endl;
-
-    PathStep currentStep = *openCells.rbegin();
+  while(!astar.OpenListEmpty()) {
+    astar.SidesOpen();
+    PathStep currentStep = astar.PopOpenList();
+    astar.PushToClosedList(currentStep.GetTable().GetCells());
 
     const Table & currentTable (currentStep.GetTable());
 
-    openCells.erase(currentStep);
     TableCellsFunc::PrintCells(currentStep.GetTable().GetCells());
-//    cout << "Inversions: " << currentStep.GetInversions() << endl;
+
     cout << "Wrongs: " << currentStep.GetWrongCnt() << endl;
     cout << "Len: " << currentStep.GetPathLength() << endl;
     cout << "Heu" << currentStep.GetHeuristic() << endl;
     cout << "INV" << currentStep.GetInversions() << endl;
     cout << "MAH" << currentStep.GetManhatanSum() <<endl;
 
-    closedSet.insert(currentStep);
+
+
     if (!currentTable.GetInversionsNum() && currentTable.GetEmptyCellIndex() == 8) {
       std::cout << "FOUND!" << std::endl;
 
-      ShowHistory(currentStep);
+      int cnt = 0;
+      ShowHistory(currentStep, cnt);
+      cout << "NUMBER OF STEPS: " << cnt << endl;
       break;
     }
+    cout << "OPEN SZ: " << astar.GetOpenListSize() << "CLOSED SZ: " << astar.GetClosedListSize() << endl;
 
 //    cout << "OPENSET : " << endl;
 //    for (auto &x : openCells) {
@@ -149,35 +144,32 @@ int main()
           continue;
         }
         PathStep moveStep(movedTable, currentStep.GetPathLength() + 1);
-//        if (moveStep.GetPathLength() > 10) {
-//          continue;
-//        }
-        moveStep.prev.reset(new PathStep(currentStep));
-        if (closedSet.find(moveStep) != closedSet.end()) {
 
-          //Сосед в закрытом списке, игнорируем его
-//          cout << "closed" << endl;
+        //указатель на предыдущий для восстановлеиня пути
+        moveStep.prev.reset(new PathStep(currentStep));
+
+        if (astar.FindInClosedList(moveStep.GetTable().GetCells())) {
+
           continue;
         }
-        auto foundOpen = openCells.find(moveStep);
-        if (foundOpen ==  openCells.end()) {
-          //Сосед не в открытом списке, надо добавить
-          openCells.insert(moveStep);
-//          std::sort(openCells.begin(), openCells.end(), sorter);
-//          cout << "opened" << endl;
 
-        } else {
+        AStar::OpenListIterator foundOpen;
+        if (astar.FindInOpenList(moveStep, foundOpen)) {
           //Сосед в открытом списке, проверяем, лучше ли этот путь
           const PathStep & step = *foundOpen;
           if (moveStep.GetHeuristic() < step.GetHeuristic()) {
             //Мы пришли сюда лучшим путем, чем раньше
             cout << "changedd : " << step.GetHeuristic() << " " << moveStep.GetHeuristic() << endl;
-//            step = moveStep;
-            openCells.erase(step);
-            openCells.insert(step);
-//            std::sort(openCells.begin(), openCells.end(), sorter);
-//            cout << "changed" << endl;
+
+            astar.ChangeStepInOpenList(foundOpen, moveStep);
           }
+        } else {
+          //Сосед не в открытом списке, надо добавить
+          astar.PushToOpenList(moveStep);
+//          openCells.insert(moveStep);
+//          std::sort(openCells.begin(), openCells.end(), sorter);
+//          cout << "opened" << endl;
+
         }
       }
     }

@@ -12,8 +12,8 @@ enum class eMoveType {
 };
 
 
-
-const int kTableSize = 9;
+const int kTableSideSize = 4;
+const int kTableSize = kTableSideSize * kTableSideSize;
 typedef std::array<char, kTableSize> TableCells;
 const char kEmptyCell = std::numeric_limits<char>::max();
 
